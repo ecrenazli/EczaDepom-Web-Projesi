@@ -122,6 +122,7 @@ $sql .= " " . $order;
                         <strong style="color:#c62828; font-size:1.5rem; display:block;"><?php echo $gecmisIlac; ?></strong>
                         <span style="font-size:0.9rem; color:#555;">Tarihi Geçen</span>
                     </div>
+                    
                     <a href="ilac_ekle.php" style="display:block; background:#27ae60; color:white; padding:12px; border-radius:5px; font-weight:bold; transition:0.3s; text-decoration:none; margin-bottom:20px;">
                         <i class="fa-solid fa-plus"></i> İlaç Ekle
                     </a>
@@ -229,6 +230,15 @@ $sql .= " " . $order;
             </div>
 
             <div class="panel-kart">
+                
+                <?php if ($mod == 'uye'): ?>
+                <div style="margin-bottom: 15px; text-align: right;">
+                    <a href="ilac_ekle.php" class="btn btn-success fw-bold">
+                        <i class="fa-solid fa-plus"></i> Yeni İlaç Ekle
+                    </a>
+                </div>
+                <?php endif; ?>
+
                 <button class="btn w-100 d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#ilacListesiCollapse" aria-expanded="true" aria-controls="ilacListesiCollapse" style="background:transparent; border:none; border-bottom:1px solid #ddd; padding:15px 0; box-shadow:none;">
                     <h3 style="margin:0; color:#2c3e50; font-size:1.3rem;"><?php echo $tabloBaslik; ?></h3>
                     <i class="fa-solid fa-chevron-down text-primary"></i>
@@ -238,8 +248,14 @@ $sql .= " " . $order;
                         <table id="tablo" class="table table-hover">
                             <thead class="table-light">
                                 <tr>
-                                    <th>İlaç Adı</th><th>Etken Madde</th><th>Kategori</th>
-                                    <?php if ($mod == 'uye'): ?><th>S.K.T.</th><th>Konum</th><th style="width:50px;">İşlem</th><?php endif; ?>
+                                    <th>İlaç Adı</th>
+                                    <th>Etken Madde</th>
+                                    <th>Kategori</th>
+                                    <?php if ($mod == 'uye'): ?>
+                                        <th>Notlar</th> <th>S.K.T.</th>
+                                        <th>Konum</th>
+                                        <th style="width:50px;">İşlem</th>
+                                    <?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -248,7 +264,7 @@ $sql .= " " . $order;
                                     $stmt = $pdo->prepare($sql);
                                     $stmt->execute($params);
                                     if($stmt->rowCount() == 0) {
-                                        echo "<tr><td colspan='6' class='text-center p-3 text-muted'>Kayıt bulunamadı.</td></tr>";
+                                        echo "<tr><td colspan='7' class='text-center p-3 text-muted'>Kayıt bulunamadı.</td></tr>";
                                     } else {
                                         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                                             $ilacAdi = htmlspecialchars($row['ilac_adi']);
@@ -259,6 +275,10 @@ $sql .= " " . $order;
                                             echo "<td class='fst-italic'>$etken</td>";
                                             echo "<td><span class='badge bg-secondary text-decoration-underline'>$kat</span></td>";
                                             if ($mod == 'uye') {
+                                                // NOTLAR SÜTUNU: Eğer boşsa tire koy
+                                                $notlar = !empty($row['notlar']) ? htmlspecialchars($row['notlar']) : "-";
+                                                echo "<td class='small text-muted'>$notlar</td>";
+
                                                 $skt = $row['son_kullanma_tarihi'];
                                                 $konum = htmlspecialchars($row['kutu_konumu']);
                                                 $id = $row['id'];
@@ -272,7 +292,7 @@ $sql .= " " . $order;
                                             echo "</tr>";
                                         }
                                     }
-                                } catch (PDOException $e) { echo "<tr><td colspan='6'>Hata: ".$e->getMessage()."</td></tr>"; }
+                                } catch (PDOException $e) { echo "<tr><td colspan='7'>Hata: ".$e->getMessage()."</td></tr>"; }
                                 ?>
                             </tbody>
                         </table>

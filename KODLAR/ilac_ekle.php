@@ -13,7 +13,7 @@ if (!isset($_SESSION['kullanici'])) {
     exit;
 }
 
-// Hataları göster
+// Hataları göster (Geliştirme aşamasında açık kalsın)
 ini_set('display_errors', 1); error_reporting(E_ALL);
 
 // Aktif Kullanıcıyı Bul
@@ -34,16 +34,21 @@ $mesaj = "";
 
 // Form Gönderildiğinde
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Verileri al
     $ilac_adi = $_POST['ilac_adi'];
     $etken_madde = $_POST['etken_madde'];
     $kategori = $_POST['kategori'];
     $skt = $_POST['skt'];
     $konum = $_POST['konum'];
+    $notlar = $_POST['notlar']; // Yeni eklenen alan
 
+    // Basit doğrulama
     if(!empty($ilac_adi) && !empty($skt)) {
         try {
-            $sql = "INSERT INTO medicines (user_id, ilac_adi, etken_madde, son_kullanma_tarihi, kutu_konumu, kategori) 
-                    VALUES (:uid, :ad, :etken, :skt, :konum, :kat)";
+            // SQL Sorgusu (notlar alanı eklendi)
+            $sql = "INSERT INTO medicines (user_id, ilac_adi, etken_madde, son_kullanma_tarihi, kutu_konumu, kategori, notlar) 
+                    VALUES (:uid, :ad, :etken, :skt, :konum, :kat, :not)";
+            
             $stmt = $pdo->prepare($sql);
             $sonuc = $stmt->execute([
                 ':uid' => $aktifKullaniciID, 
@@ -51,7 +56,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 ':etken' => $etken_madde, 
                 ':skt' => $skt, 
                 ':konum' => $konum, 
-                ':kat' => $kategori
+                ':kat' => $kategori,
+                ':not' => $notlar
             ]);
             
             if($sonuc) {
@@ -63,7 +69,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $mesaj = "<div style='background:#f8d7da; color:#721c24; padding:15px; border-radius:5px;'>❌ Hata: " . $e->getMessage() . "</div>"; 
         }
     } else { 
-        $mesaj = "<div style='background:#fff3cd; color:#856404; padding:15px; border-radius:5px;'>⚠️ Lütfen ilaç ve tarih girin.</div>"; 
+        $mesaj = "<div style='background:#fff3cd; color:#856404; padding:15px; border-radius:5px;'>⚠️ Lütfen ilaç adı ve son kullanma tarihini girin.</div>"; 
     }
 }
 ?>
@@ -113,24 +119,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <form action="" method="POST">
                     
                     <div style="margin-bottom:15px;">
-                        <label style="font-weight:bold; display:block; margin-bottom:5px;">İlaç Seçin (Otomatik Doldur):</label>
-                        <select id="ilacSecimi" name="ilac_adi" style="width:100%; padding:12px; border:2px solid #3498db; border-radius:5px; background:#f0f8ff;">
-                            <option value="">-- Listeden İlaç Seçiniz --</option>
+                        <label style="font-weight:bold; display:block; margin-bottom:5px;">Hızlı Seçim (İsteğe Bağlı):</label>
+                        <select id="ilacSecimi" style="width:100%; padding:12px; border:2px solid #3498db; border-radius:5px; background:#f0f8ff;">
+                            <option value="">-- Listeden Seçip Otomatik Doldur --</option>
                             <?php foreach ($hazir_ilaclar as $ilac) { 
                                 echo "<option value='{$ilac['ad']}' data-etken='{$ilac['etken']}' data-kategori='{$ilac['kategori']}'>{$ilac['ad']}</option>"; 
                             } ?>
                         </select>
-                        <small style="color:#666; font-size:0.8rem;">İstediğiniz ilaç listede yoksa bilgileri manuel girebilirsiniz.</small>
+                        <small style="color:#666; font-size:0.8rem;">Listeden seçebilir VEYA aşağıya kendiniz yazabilirsiniz.</small>
+                    </div>
+
+                    <div style="margin-bottom:15px;">
+                        <label style="font-weight:bold;">İlaç Adı:</label>
+                        <input type="text" name="ilac_adi" id="ilacAdiInput" placeholder="İlacın adını yazın..." required style="width:100%; padding:12px; border:1px solid #ccc; border-radius:5px;">
                     </div>
 
                     <div style="margin-bottom:15px;">
                         <label style="font-weight:bold;">Etken Madde:</label>
-                        <input type="text" name="etken_madde" id="etkenKutusu" placeholder="Otomatik dolacak..." style="width:100%; padding:12px; border:1px solid #ccc; border-radius:5px; background:#f9f9f9;">
+                        <input type="text" name="etken_madde" id="etkenKutusu" placeholder="Örn: Parasetamol" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:5px; background:#f9f9f9;">
                     </div>
 
                     <div style="margin-bottom:15px;">
                         <label style="font-weight:bold;">Kategori:</label>
-                        <input type="text" name="kategori" id="kategoriKutusu" placeholder="Otomatik dolacak..." style="width:100%; padding:12px; border:1px solid #ccc; border-radius:5px; background:#f9f9f9;">
+                        <input type="text" name="kategori" id="kategoriKutusu" placeholder="Örn: Ağrı Kesici" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:5px; background:#f9f9f9;">
                     </div>
 
                     <div style="margin-bottom:15px;">
@@ -145,8 +156,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             <option value="Mutfak">Mutfak</option>
                             <option value="Banyo">Banyo</option>
                             <option value="Çanta">Çanta</option>
+                            <option value="Yatak Odası">Yatak Odası</option>
                             <option value="Diğer">Diğer</option>
                         </select>
+                    </div>
+
+                    <div style="margin-bottom:20px;">
+                        <label style="font-weight:bold;">Notlar / Açıklama:</label>
+                        <textarea name="notlar" rows="3" placeholder="Örn: Günde 2 defa tok karna..." style="width:100%; padding:12px; border:1px solid #ccc; border-radius:5px;"></textarea>
                     </div>
 
                     <button type="submit" style="background:#27ae60; color:white; padding:15px; border:none; border-radius:8px; cursor:pointer; font-size:1.1rem; width:100%; font-weight:bold;">
@@ -212,17 +229,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <script>
         document.getElementById('ilacSecimi').addEventListener('change', function() {
             var opt = this.options[this.selectedIndex];
+            var ilacAdi = opt.value; // Seçilen ilacın adı
             var etken = opt.getAttribute('data-etken');
             var kategori = opt.getAttribute('data-kategori');
             
-            if(etken) {
+            if(ilacAdi) {
+                // Listeden seçildiyse Inputlara doldur
+                document.getElementById('ilacAdiInput').value = ilacAdi;
                 document.getElementById('etkenKutusu').value = etken;
                 document.getElementById('kategoriKutusu').value = kategori;
-                document.getElementById('etkenKutusu').style.backgroundColor = "#d4edda";
-                setTimeout(() => { document.getElementById('etkenKutusu').style.backgroundColor = "#f9f9f9"; }, 500);
+
+                // Görsel efekt (Yeşil yanıp sönme)
+                document.getElementById('ilacAdiInput').style.backgroundColor = "#d4edda";
+                setTimeout(() => { document.getElementById('ilacAdiInput').style.backgroundColor = "#fff"; }, 500);
             } else {
-                document.getElementById('etkenKutusu').value = "";
-                document.getElementById('kategoriKutusu').value = "";
+                // "Seçiniz"e dönerse temizleme yapmıyoruz ki kullanıcı elle yazabilsin
             }
         });
     </script>
